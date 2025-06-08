@@ -23,6 +23,7 @@ CONFIG = {
         # 'http://proxy1:port',
         # 'http://proxy2:port'
     ],
+    # User agents to rotate through
     "user_agents": [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
