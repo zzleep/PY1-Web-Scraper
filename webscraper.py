@@ -1,29 +1,30 @@
-import pandas as pd
-import os
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
-from random import uniform
-import json
+# Import required libraries
+import pandas as pd  # For data manipulation and CSV operations
+import os  # For file and path operations
+from selenium import webdriver  # For browser automation
+from selenium.webdriver.common.by import By  # For locating elements
+from selenium.webdriver.chrome.service import Service  # For ChromeDriver service
+from selenium.webdriver.support.ui import WebDriverWait  # For explicit waits
+from selenium.webdriver.support import expected_conditions as EC  # For wait conditions
+from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel execution
+import time  # For delays and timing
+from random import uniform  # For randomizing delays
+import json  # For caching and data storage
 
-# Configuration
+# Configuration dictionary for scraper settings
 CONFIG = {
-    "chromedriver_path": "path/to/chromedriver",  # Update with your chromedriver path
-    "output_csv": "github_projects.csv",
-    "cache_file": "scrape_cache.json",
-    "max_workers": 6,  # Optimal for most systems
-    "min_delay": 1.0,  # Minimum delay between requests (seconds)
-    "max_delay": 3.0,  # Maximum delay to avoid rate limiting
-    "headless": True,
-    "proxies": [  # Rotate through these if needed
+    "chromedriver_path": "path/to/chromedriver",  # Path to your ChromeDriver executable
+    "output_csv": "github_projects.csv",  # Output CSV file for scraped data
+    "cache_file": "scrape_cache.json",  # Cache file to store progress and avoid duplicates
+    "max_workers": 6,  # Number of parallel threads for scraping
+    "min_delay": 1.0,  # Minimum delay (in seconds) between requests to avoid detection
+    "max_delay": 3.0,  # Maximum delay (in seconds) to randomize request intervals
+    "headless": True,  # Run Chrome in headless mode (no GUI)
+    "proxies": [  # List of proxies to rotate for anonymity (add your proxies if needed)
         # 'http://proxy1:port',
         # 'http://proxy2:port'
     ],
-    # User agents to rotate through
+    # List of user agents to rotate for each request
     "user_agents": [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
@@ -149,28 +150,30 @@ def main():
         for future in as_completed(futures):
             url = futures[future]
             try:
-                new_projects = future.result()
+                new_projects = future.result()  # Get the result from the completed thread (list of new projects)
                 if new_projects:
-                    cache['projects'].extend(new_projects)
-                    # Save incremental progress
+                    cache['projects'].extend(new_projects)  # Add new projects to the cache
+                    # Save incremental progress to cache file after each batch
                     save_cache(cache)
             except Exception as e:
-                print(f"Thread error for {url}: {e}")
+                print(f"Thread error for {url}: {e}")  # Log any thread-specific errors
 
-    # Create DataFrame and save
+    # Create a DataFrame from all collected projects for easy data manipulation and export
     df = pd.DataFrame(cache['projects'])
 
-    # Merge with existing data if file exists
+    # If the output CSV already exists, merge new data with existing data and remove duplicates
     if os.path.exists(CONFIG['output_csv']):
-        existing_df = pd.read_csv(CONFIG['output_csv'])
-        df = pd.concat([existing_df, df]).drop_duplicates(subset=['URL'], keep='last')
+        existing_df = pd.read_csv(CONFIG['output_csv'])  # Load existing data
+        df = pd.concat([existing_df, df]).drop_duplicates(subset=['URL'], keep='last')  # Merge and deduplicate
 
-    df.to_csv(CONFIG['output_csv'], index=False)
+    df.to_csv(CONFIG['output_csv'], index=False)  # Save the final DataFrame to CSV
 
+    # Print summary statistics for the scraping session
     print(f"\nScraping completed in {time.time()-start_time:.2f} seconds")
     print(f"Total projects: {len(df)}")
     print(f"New projects added: {len([p for p in cache['projects'] if p['URL'] not in cache['scraped_urls']])}")
     print(f"Data saved to {CONFIG['output_csv']}")
 
+# Entry point for the script; ensures main() only runs when script is executed directly
 if __name__ == "__main__":
     main()
